@@ -1,0 +1,14 @@
+https://40.74.81.193/zh_TW/download?resourceid=06b3e609-e6d5-4cc5-abe4-a243e025dd94&dataurl=https://od.cdc.gov.tw/eic/NHI_AcuteUpperRespiratoryInfections.csv
+https://40.74.81.193/zh_TW/download?resourceid=b9ec1bba-63ec-48bd-a7e3-95220c2c2a3d&dataurl=https://od.cdc.gov.tw/eic/NHI_Diarrhea.csv
+https://40.74.81.193/zh_TW/download?resourceid=0147ca52-5a2c-498b-ad56-380f49b3c526&dataurl=https://od.cdc.gov.tw/eic/NHI_EnteroviralInfection.csv
+https://40.74.81.193/zh_TW/download?resourceid=0ffdb524-801a-4338-be60-14b6d96ddc09&dataurl=https://od.cdc.gov.tw/eic/NHI_HandFootMouthDisease.csv
+https://40.74.81.193/zh_TW/download?resourceid=fda6a825-e280-4ab2-b505-ee10c16c27c4&dataurl=https://od.cdc.gov.tw/eic/NHI_Herpangina.csv
+https://40.74.81.193/zh_TW/download?resourceid=c13979f4-37e4-4019-8dcb-d302122732f0&dataurl=https://od.cdc.gov.tw/eic/NHI_Influenza.csv
+https://40.74.81.193/zh_TW/download?resourceid=e4da3115-61be-40ae-a26d-cb2817b79099&dataurl=https://od.cdc.gov.tw/eic/NHI_Influenza_like_illness.csv
+https://40.74.81.193/zh_TW/download?resourceid=223928d8-cff2-4ab0-ab55-41629d02b964&dataurl=https://od.cdc.gov.tw/eic/NHI_OtherPneumonia.csv
+https://40.74.81.193/zh_TW/download?resourceid=77aa5921-0a44-4cdb-9d06-07dce5b0e8b2&dataurl=https://od.cdc.gov.tw/eic/NHI_ScarletFever.csv
+https://40.74.81.193/zh_TW/download?resourceid=d66c7eaf-67e9-4662-b0f1-7f81ad0bec19&dataurl=https://od.cdc.gov.tw/eic/NHI_Varicella.csv
+https://40.74.81.193/zh_TW/download?resourceid=a5a43e1e-d696-4515-a249-b91df6a53887&dataurl=https://od.cdc.gov.tw/eic/RODS_Influenza_like_illness.csv
+https://40.74.81.193/zh_TW/download?resourceid=3c1e263d-16ec-4d70-b56c-21c9e2171fc7&dataurl=https://od.cdc.gov.tw/eic/Day_Confirmation_Age_County_Gender_19CoV.csv
+https://40.74.81.193/zh_TW/download?resourceid=ae0dd977-1df3-40ff-b2e5-5394b9833e4b&dataurl=https://od.cdc.gov.tw/eic/Weekly_Confirmation_Age_County_Gender_19CoV.csv
+https://nidss.cdc.gov.tw/en/misc/fludeaths

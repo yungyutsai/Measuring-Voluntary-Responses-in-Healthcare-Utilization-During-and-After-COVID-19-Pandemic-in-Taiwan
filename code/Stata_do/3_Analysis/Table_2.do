@@ -1,0 +1,47 @@
+local var = "total infection non_infection"
+local did = "covid19 treatment post"
+local control1 = "i.eve i.ny i.cny i.peace i.qingming i.labor i.dragon i.moon i.double10"
+local control2 = "i.eve i.ny i.cny i.peace i.qingming i.labor i.dragon i.moon i.double10 Temp Precp"
+local control3 = "i.eve i.ny i.cny i.peace i.qingming i.labor i.dragon i.moon i.double10 Temp Precp"
+local control4 = "i.eve i.ny i.cny i.peace i.qingming i.labor i.dragon i.moon i.double10 Temp Precp"
+local absorb1 = "year week"
+local absorb2 = "year week"
+local absorb3 = "year week city_no"
+local absorb4 = "city_no#year city_no#week"
+
+clear
+set more off
+capture log close
+
+cap mkdir "$table/temp"
+
+foreach x in `var' {
+foreach y in opd ipd{
+use "$wdata/NHI_`y'_for_analysis.dta", clear
+
+forv i = 1(1)4{
+
+ppmlhdfe `x' `did' `control`i'' [pweight = population], absorb(`absorb`i'') vce(cl city_cd yearweek) exp(population)
+
+if "`y'" == "opd" & `i' == 1{
+outreg2 using "$table/temp/Table_2_`x'", ///
+replace title("Outcomes: `x'") ctitle(`y') nocon keep(covid19) bd(2) sd(2) 
+}
+else{
+outreg2 using "$table/temp/Table_2_`x'", ///
+append title("Outcomes: `x'") ctitle(`y') nocon keep(covid19) bd(2) sd(2)
+}
+}
+}
+clear
+import delimited "$table/temp/Table_2_`x'.txt"
+drop in 9
+save "$table/temp/Table_2_`x'.dta", replace
+
+}
+
+use "$table/temp/Table_2_total.dta"
+ap using "$table/temp/Table_2_infection.dta"
+ap using "$table/temp/Table_2_non_infection.dta"
+
+export excel using "$table/Table_2.xlsx", replace
