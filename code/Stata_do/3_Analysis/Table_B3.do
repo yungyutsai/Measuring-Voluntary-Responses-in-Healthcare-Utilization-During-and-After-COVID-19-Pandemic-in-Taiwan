@@ -49,4 +49,3 @@ drop in 13/16
 compress
 export excel using "$table/Table_B3.xlsx", replace
 
-log close

@@ -1,7 +1,7 @@
 clear
 set more off
 
-import delimited "$rdata/NHI/csv/CDC_Flu_Pneumonia_death.csv", encoding(UTF-8)
+import delimited "$rdata/NHI/CDC_Flu_Pneumonia_death.csv", encoding(UTF-8)
 
 gen year = floor(死亡年週/100)
 gen week = mod(死亡年週,100)

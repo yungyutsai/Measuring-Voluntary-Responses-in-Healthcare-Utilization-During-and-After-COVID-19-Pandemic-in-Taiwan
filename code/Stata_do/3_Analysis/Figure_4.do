@@ -85,6 +85,6 @@ twoway	(scatteri 0.61 20 0.61 0 -1 0 -1 20, recast(area) lc(gs13) color(gs12)) /
 		xtitle("Weeks form the 4{superscript:th} week of a year") ///
 		text(0.62 10 "During Pandemic Period", size(small) place(n)) ///
 		text(0.62 34 "After Pandemic Period", size(small) place(n))
-graph export "$pic/Figure_4_`y'_`x'.png", as(png) replace
+graph export "$figure/Figure_4_`y'_`x'.png", as(png) replace
 }
 }

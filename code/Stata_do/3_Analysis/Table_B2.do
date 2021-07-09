@@ -94,4 +94,3 @@ compress
 
 export excel using "$table/Table_B2.xlsx", replace
 
-log close

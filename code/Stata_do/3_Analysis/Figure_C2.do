@@ -2,7 +2,7 @@ clear
 set more off
 capture log close
 
-import delimited "$rdata/yougov/csv/yougov-chart-mask.csv", encoding(UTF-8) clear
+import delimited "$rdata/yougov/yougov-chart-mask.csv", encoding(UTF-8) clear
 
 keep datetime taiwan usa
 gen year = substr(date,1,4)

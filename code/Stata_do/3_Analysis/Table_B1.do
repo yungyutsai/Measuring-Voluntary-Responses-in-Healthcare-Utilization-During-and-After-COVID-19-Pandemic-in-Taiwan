@@ -69,4 +69,3 @@ compress
 
 export excel using "$table/Table_B1.xlsx", replace
 
-log close

@@ -1,7 +1,7 @@
 clear 
 set more off
 
-import delimited "$rdata/NHI/csv/Weekly_Confirmation_Age_County_Gender_19CoV.csv", encoding(UTF-8) clear
+import delimited "$rdata/NHI/Weekly_Confirmation_Age_County_Gender_19CoV.csv", encoding(UTF-8) clear
 gen year = 研判年份
 gen week = 研判週別
 rename 確定病例數 cases
