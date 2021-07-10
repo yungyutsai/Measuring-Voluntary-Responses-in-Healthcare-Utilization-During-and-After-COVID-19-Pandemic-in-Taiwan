@@ -14,7 +14,7 @@ set more off
 
 foreach x in `var' {
 foreach y in opd ipd{
-use $wdata/NHI_`y'_for_analysis.dta, clear
+use "$wdata/NHI_`y'_for_analysis.dta", clear
 
 forv i = 1(1)4{
 
@@ -46,15 +46,14 @@ addtext(Cluster at County Level 1, "[`se_city1']", Cluster at YearWeek Level 1, 
 }
 }
 clear
-import delimited $table/temp/Table_B2_`x'.txt
-drop in 9
-save $table/temp/Table_B2_`x'.dta, replace
+import delimited "$table/temp/Table_B2_`x'.txt"
+save "$table/temp/Table_B2_`x'.dta", replace
 
 }
 
-use $table/temp/Table_B2_total.dta, clear
-ap using $table/temp/Table_B2_infection.dta
-ap using $table/temp/Table_B2_non_infection.dta
+use "$table/temp/Table_B2_total.dta", clear
+ap using "$table/temp/Table_B2_infection.dta"
+ap using "$table/temp/Table_B2_non_infection.dta"
 
 forv i = 2(1)9{
 	replace v`i' = subinstr(v`i',"[.","[0.",.)
@@ -65,32 +64,29 @@ compress
 
 gen row = _n
 
-replace row = 6.1 if row == 10
-replace row = 6.2 if row == 11
-replace row = 8.1 if row == 12
-replace row = 8.2 if row == 13
-replace row = 0 if row == 9
-replace row = 0 if row == 14
-replace row = 0 if row == 15
-replace row = 21.1 if row == 25
-replace row = 21.2 if row == 26
-replace row = 23.1 if row == 27
-replace row = 23.2 if row == 28
-replace row = 0 if row == 17 | row == 18 | row == 19
-replace row = 0 if row == 24
-replace row = 0 if row == 29
-replace row = 0 if row == 30
-replace row = 36.1 if row == 40
-replace row = 36.2 if row == 41
+replace row = 6.1 if row == 11
+replace row = 6.2 if row == 12
+replace row = 8.1 if row == 13
+replace row = 8.2 if row == 14
+replace row = 22.1 if row == 27
+replace row = 22.2 if row == 28
+replace row = 24.1 if row == 29
+replace row = 24.2 if row == 30
 replace row = 38.1 if row == 42
 replace row = 38.2 if row == 43
-replace row = 0 if row == 32 | row == 33 | row == 34
-replace row = 0 if row == 39
+replace row = 40.1 if row == 44
+replace row = 40.2 if row == 45
 
-drop if row == 0
 sort row
 drop row 
 compress
+
+keep if inrange(_n,4,12) | inrange(_n,20,28) | inrange(_n,36,47) 
+
+replace v1 = "Panel A: Total Visits/Admissions" in 1 
+replace v1 = "Panel B: Infectious Diseases" in 10
+replace v1 = "Panel C: Non-infectious diseases" in 19
+
 
 export excel using "$table/Table_B2.xlsx", replace
 

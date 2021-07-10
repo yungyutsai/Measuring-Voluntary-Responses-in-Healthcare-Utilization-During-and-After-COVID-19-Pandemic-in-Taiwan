@@ -35,13 +35,17 @@ append title("Outcomes: `x'") ctitle(`y') nocon keep(covid19) bd(2) sd(2)
 }
 clear
 import delimited "$table/temp/Table_2_`x'.txt"
-drop in 9
 save "$table/temp/Table_2_`x'.dta", replace
-
 }
 
 use "$table/temp/Table_2_total.dta"
 ap using "$table/temp/Table_2_infection.dta"
 ap using "$table/temp/Table_2_non_infection.dta"
+
+keep if inrange(_n,4,6) | inrange(_n,14,16) | inrange(_n,24,30)
+
+replace v1 = "Panel A: Total Visits/Admissions" in 1 
+replace v1 = "Panel B: Infectious Diseases" in 4
+replace v1 = "Panel C: Non-infectious diseases" in 7
 
 export excel using "$table/Table_2.xlsx", replace

@@ -14,7 +14,7 @@ set more off
 
 foreach x in `var' {
 foreach y in opd ipd{
-use $wdata/NHI_`y'_for_analysis.dta, clear
+use "$wdata/NHI_`y'_for_analysis.dta", clear
 
 forv i = 1(1)4{
 
@@ -34,17 +34,21 @@ append title("Outcomes: `x'") ctitle(`y') nocon keep(covid19) bd(2) sd(2)
 }
 }
 clear
-import delimited $table/temp/Table_B3_`x'.txt
-save $table/temp/Table_B3_`x'.dta, replace
+import delimited "$table/temp/Table_B3_`x'.txt"
+save "$table/temp/Table_B3_`x'.dta", replace
 
 }
 
-use $table/temp/Table_B3_total.dta, clear
-ap using $table/temp/Table_B3_infection.dta
-ap using $table/temp/Table_B3_non_infection.dta
+use "$table/temp/Table_B3_total.dta", clear
+ap using "$table/temp/Table_B3_infection.dta"
+ap using "$table/temp/Table_B3_non_infection.dta"
 
-drop in 7/10
-drop in 13/16
+
+keep if inrange(_n,4,6) | inrange(_n,14,16) | inrange(_n,24,30)
+
+replace v1 = "Panel A: Total Visits/Admissions" in 1 
+replace v1 = "Panel B: Infectious Diseases" in 4
+replace v1 = "Panel C: Non-infectious diseases" in 7
 
 compress
 export excel using "$table/Table_B3.xlsx", replace

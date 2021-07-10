@@ -15,7 +15,7 @@ capture log close
 
 foreach x in `var' {
 foreach y in opd ipd{
-use $wdata/NHI_`y'_for_analysis.dta, clear
+use "$wdata/NHI_`y'_for_analysis.dta", clear
 
 forv i = 1(1)4{
 
@@ -35,14 +35,19 @@ append title("Outcomes: `x'") ctitle(`y') nocon keep(TxPandemic TxPostPandemic) 
 }
 }
 clear
-import delimited $table/temp/Table_3_`x'.txt
-drop in 9
-save $table/temp/Table_3_`x'.dta, replace
+import delimited "$table/temp/Table_3_`x'.txt"
+save "$table/temp/Table_3_`x'.dta", replace
 
 }
 
-use $table/temp/Table_3_total.dta
-ap using $table/temp/Table_3_infection.dta
-ap using $table/temp/Table_3_non_infection.dta
+use "$table/temp/Table_3_total.dta"
+ap using "$table/temp/Table_3_infection.dta"
+ap using "$table/temp/Table_3_non_infection.dta"
+
+keep if inrange(_n,4,8) | inrange(_n,16,20) | inrange(_n,28,36)
+
+replace v1 = "Panel A: Total Visits/Admissions" in 1 
+replace v1 = "Panel B: Infectious Diseases" in 6
+replace v1 = "Panel C: Non-infectious diseases" in 11
 
 export excel using "$table/Table_3.xlsx", replace

@@ -14,7 +14,7 @@ set more off
 
 foreach x in `var' {
 foreach y in opd ipd{
-use $wdata/NHI_`y'_for_analysis.dta, clear
+use "$wdata/NHI_`y'_for_analysis.dta", clear
 
 forv i = 1(1)4{
 
@@ -44,13 +44,13 @@ addtext(Cluster at County Level, "[`se_city']", Cluster at YearWeek Level, "{`se
 }
 }
 clear
-import delimited $table/temp/Table_B1_`x'.txt
-save $table/temp/Table_B1_`x'.dta, replace
+import delimited "$table/temp/Table_B1_`x'.txt"
+save "$table/temp/Table_B1_`x'.dta", replace
 }
 
-use $table/temp/Table_B1_total.dta, clear
-ap using $table/temp/Table_B1_infection.dta
-ap using $table/temp/Table_B1_non_infection.dta
+use "$table/temp/Table_B1_total.dta", clear
+ap using "$table/temp/Table_B1_infection.dta"
+ap using "$table/temp/Table_B1_non_infection.dta"
 
 drop in 7/8
 drop in 9/10
@@ -64,6 +64,10 @@ forv i = 2(1)9{
 	replace v`i' = subinstr(v`i',"[.","[0.",.)
 	replace v`i' = subinstr(v`i',"{.","{0.",.)
 }
+
+replace v1 = "Panel A: Total Visits/Admissions" in 1 
+replace v1 = "Panel B: Infectious Diseases" in 9
+replace v1 = "Panel C: Non-infectious diseases" in 14
 
 compress
 

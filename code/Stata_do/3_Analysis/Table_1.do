@@ -9,11 +9,9 @@ gen perc_influenza_like = influenza_like / population * 100000
 collapse	(mean) perc_total 		(sd) sd1  = perc_total ///
 			(mean) perc_infection	(sd) sd2  = perc_infection ///
 			(mean) perc_non_infection (sd) sd3  = perc_non_infection ///
-			(mean) perc_influenza_like (sd) sd4  = perc_influenza_like ///
-			(mean) population		(sd) sd5  = population ///
-			(mean) Temperature		(sd) sd6  = Temperature ///
-			(mean) Precp			(sd) sd7  = Precp ///
-			(mean) sumworkdays		(sd) sd8  = sumworkdays ///
+			(mean) population		(sd) sd4  = population ///
+			(mean) Temperature		(sd) sd5  = Temperature ///
+			(mean) Precp			(sd) sd6  = Precp ///
 			(count) N = year, by(treatment post)
 
 gsort -treatment post
@@ -41,7 +39,6 @@ gen perc_influenza_like = influenza_like / population * 100000
 collapse	(mean) perc_total 		(sd) sd1  = perc_total ///
 			(mean) perc_infection	(sd) sd2  = perc_infection ///
 			(mean) perc_non_infection (sd) sd3  = perc_non_infection ///
-			(mean) perc_influenza_like (sd) sd4  = perc_influenza_like ///
 			, by(treatment post)
 			
 gsort -treatment post

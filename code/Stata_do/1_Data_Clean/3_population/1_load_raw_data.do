@@ -1,4 +1,4 @@
-forv i = 103(1)109{
+forv i = 102(1)109{ //Equivalent to A.D. 2013 to 2020
 local y = substr("0"+"`i'",-3,3)
 if `i' == 110 {
 local a = 4
