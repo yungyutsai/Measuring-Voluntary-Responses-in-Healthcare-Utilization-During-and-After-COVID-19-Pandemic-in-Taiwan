@@ -1,6 +1,10 @@
-local var = "total infection non_infection"
+local var = "flu non_flu"
 local control = "i.eve i.ny i.cny i.peace i.qingming i.labor i.dragon i.moon i.double10 Temp Precp"
-local absorb = "city_no#year city_no#week"
+local absorb = "city_no#c.yweek city_no#year city_no#week"
+local opd_flu = "(A) Outpatient care: ILI diseases"
+local opd_non_flu = "(B) Outpatient care: Non-ILI diseases"
+local ipd_flu = "(C) Inpatient care: ILI diseases" 
+local ipd_non_flu = "(D) Inpatient care: Non-ILI diseases"
 
 clear
 set more off
@@ -8,38 +12,6 @@ set more off
 clear matrix
 clear mata
 set maxvar 9999
-set seed 20200518
-
-* create 1000 random variables
-foreach y in opd ipd{
-	qui use "$wdata/NHI_`y'_for_analysis.dta", clear
-	qui drop if year >= 2020
-	forv i = 1(1)1000{
-	if `i' == 1 {
-		dis "Create Ramdom Variables for `y' Sample (1000)"
-		dis "----+--- 1 ---+--- 2 ---+--- 3 ---+--- 4 ---+--- 5"
-	}
-	_dots `i' 0
-		qui{
-			bys city_no: gen num`i' = runiform() if week == 1
-			bys city_no: egen rank`i' = rank(num`i')
-			egen minrank`i' = min(rank`i'), by(city_no year)
-		
-			gen treat`i' = 0
-			replace treat`i' = 1 if minrank`i' == 1
-
-			gen covid19`i' = 0
-			replace covid19`i' = 1 if treat`i' == 1 & post == 1
-
-			gen TxPandemic`i' = Pandemic == 1 & treat`i' == 1
-			gen TxPostPandemic`i' = PostPandemic == 1 & treat`i' == 1
-		}
-	}
-drop num* rank*
-save "$wdata/NHI_`y'_for_placebo.dta", replace 
-}
-
-** Placebo Estimates
 cap mkdir "$figure/temp"
 cap rm "$figure/temp/Figure_6.dta"
 foreach x in `var' {
@@ -54,19 +26,29 @@ foreach y in opd ipd{
 	
 	qui{
 		use "$wdata/NHI_`y'_for_placebo.dta", clear
-
-		ppmlhdfe `x' TxPandemic`i' TxPostPandemic`i' treat`i' post `control' [pweight = population], absorb(`absorb') vce(cl city_cd yearweek) exp(population)
-		parmest , saving("$figure/temp/Figure_6_temp.dta", replace) idstr("`y',`x'") idnum(`i')
+		replace `x' = `x' / population * 100000		
 		
-		if "`x'" == "total" & "`y'" == "opd" & `i' == 1{
+		replace week = week - 4
+		forv j = 3(-1)1{
+			cap replace pre`j'Xtreat = treat`i' == 1 & week == - `j'
+		}
+		forv j = 0(1)48{
+			replace post`j'Xtreat = treat`i' == 1 & week == `j'
+		}
+		replace week = week + 4
+
+		ppmlhdfe `x' p*treat treat`i' `control' [pweight = population], absorb(`absorb') vce(cl city_cd yearweek)
+		parmest , saving("$figure/temp/Figure_6_temp.dta", replace) idstr("`y',`x'") idnum(`i') eform
+
+		if "`x'" == "flu" & "`y'" == "opd" & `i' == 1{
 			use "$figure/temp/Figure_6_temp.dta", clear
-			keep if substr(parm,1,7) == "TxPande" | substr(parm,1,7) == "TxPostP"
+			keep if substr(parm,-6,6) == "Xtreat"
 			save "$figure/temp/Figure_6.dta", replace
 		}
 		else{
 			use "$figure/temp/Figure_6.dta", clear
 			ap using "$figure/temp/Figure_6_temp.dta"
-			keep if substr(parm,1,7) == "TxPande" | substr(parm,1,7) == "TxPostP"
+			keep if substr(parm,-6,6) == "Xtreat"
 			save "$figure/temp/Figure_6.dta", replace
 		}
 	}
@@ -74,152 +56,80 @@ foreach y in opd ipd{
 
 }
 }
-
 ** Re estimate Main Specification
-local var = "total infection non_infection"
-local control = "i.eve i.ny i.cny i.peace i.qingming i.labor i.dragon i.moon i.double10 Temp Precp"
-local absorb = "city_no#year city_no#week"
 
 foreach x in `var' {
 foreach y in opd ipd{
+use "$wdata/NHI_`y'_for_analysis.dta", clear
+replace `x' = `x' / population * 100000
 
-use $wdata/NHI_`y'_for_analysis.dta, clear
+ppmlhdfe `x' p*treat treatment `control' [pweight = population], absorb(`absorb') vce(cl city_cd yearweek) 
+parmest , saving($figure/temp/Figure_6_temp.dta, replace) idstr("`y',`x'") idnum(0) eform
 
-ppmlhdfe `x' TxPandemic TxPostPandemic treatment post `control' [pweight = population], absorb(`absorb') vce(cl city_cd yearweek) exp(population)
-parmest , saving($figure/temp/Figure_6_temp.dta, replace) idstr("`y',`x'") idnum(0)
-		
 use "$figure/temp/Figure_6.dta", clear
 ap using "$figure/temp/Figure_6_temp.dta"
-keep if substr(parm,1,7) == "TxPande" | substr(parm,1,7) == "TxPostP"
+keep if substr(parm,-6,6) == "Xtreat"
 save "$figure/temp/Figure_6.dta", replace
+}
+}
 
-}
-}
 
 ** Graphing
-use "$figure/temp/Figure_6.dta", clear
+use "$figure/temp/Figure_6.dta", replace
 
-replace parm = substr(parm,1,5)
+cap gen week = parm
+cap replace week = subinstr(week,"Xtreat","",.)
+cap replace week = subinstr(week,"pre","-",.)
+cap replace week = subinstr(week,"post","",.)
+cap destring week, replace
 
-sum estimate if parm == "TxPan" & ids == "ipd,infection" & idn == 0
-local main1 = r(mean)
-local textpos1 = `main1' + 0.01
-sum estimate if parm == "TxPos" & ids == "ipd,infection" & idn == 0
-local main2 = r(mean)
-local textpos2 = `main2' + 0.01
+save "$figure/temp/Figure_6_Placebo_EventStudy_Poisson.dta", replace
 
-twoway 	(hist estimate if parm == "TxPan" & ids == "ipd,infection" & idn > 0, lc(maroon%50) fc(maroon%50) frac start(-0.5) width(0.02)) ///
-		(hist estimate if parm == "TxPos" & ids == "ipd,infection" & idn > 0, lc(navy%50) fc(navy%50) frac start(-0.5) width(0.02)) ///
-		(scatteri 0 `main1' 0.14 `main1', recast(line) lc(maroon) lp(dash)) ///
-		(scatteri 0 `main2' 0.14 `main2', recast(line) lc(navy) lp(dash)), ///
+keep idnum idstr
+duplicates drop
+expand 52
+
+bysort idnum idstr: gen week = _n
+replace week = week - 4
+
+merge 1:m idnum idstr week using "$figure/temp/Figure_6_Placebo_EventStudy_Poisson.dta"
+drop _m
+
+recode estimate . = 1
+recode min95 . = 1
+recode max95 . = 1
+  
+gen main = idnum == 0
+
+sort idn week
+foreach x in flu non_flu {
+foreach y in opd ipd{
+
+serset clear
+local figure = ""
+forv i = 1(1)1000{
+	local figure = `"`figure' (line estimate week if idn == `i' & ids == "`y',`x'", mcolor(gs12) lc(gs12) lw(vvthin))"'
+}
+	
+twoway	`figure' ///
+		(rline max95 min95 week if idn == 0 & ids == "`y',`x'", lc(navy) lp(dash) lw(thin)) ///
+		(connect estimate week if idn == 0 & ids == "`y',`x'", mcolor(maroon) lc(maroon) msize(small)) ///
+		(scatteri 1 -3 1 48, recast(line) lc(black) lp(dash)), ///
 		graphregion(fcolor(white) lcolor(white) ifcolor(white) ilcolor(white)) ///
 		plotregion(fcolor(white) lcolor(white) ifcolor(white) ilcolor(white)) ///
-		xscale(range(-0.5 0.35)) xlabel(-0.45(0.15)0.3) ylabel(0(0.02)0.14) ///
-		text(0.1 `textpos1' "Real Estimate" "(During Pandemic)", place(ne) color(maroon) size(small)) ///
-		text(0.08 `textpos2' "Real Estimate" "(After Pandemic)", place(ne) color(navy) size(small)) ///
-		xtitle(Placebo Estimate) ytitle(Fraction) ///
-		legend(order(1 "Placebo Estimates (During Pandemic)" 2 "Placebo Estimates (After Pandemic)") size(small))
-graph export "$figure/Figure_6_ipd_infectious.png", as(png) replace
+		yscale(range(0.3 1.9)) ylabel(0.4(0.2)1.8, nogrid format(%9.1f) angle(0)) ///
+		xlabel(0(5)45) leg(col(3) order(1002 "Main Estimate" 1001 "Main Estimate 95% CI" 1 "Placebo Test") size(small) symxsize(4pt)) ///
+		ytitle("Estimated IRR", size(small)) ///
+		xtitle("Weeks form the 4{superscript:th} week of a year", size(small)) ///
+		title(``y'_`x'', color(black) size(medlarge) margin(medium)) ///
+		fxsize(100) fysize(80)
+graph save "$figure/temp/Fig6_`y'_`x'.gph", replace
+}
+}
 
-sum estimate if parm == "TxPan" & ids == "opd,infection" & idn == 0
-local main1 = r(mean)
-local textpos1 = `main1' + 0.01
-sum estimate if parm == "TxPos" & ids == "opd,infection" & idn == 0
-local main2 = r(mean)
-local textpos2 = `main2' + 0.01
+foreach x in Fig6_opd_flu Fig6_opd_non_flu Fig6_ipd_flu Fig6_ipd_non_flu{
+	serset clear
+	graph use "$figure/temp/`x'"
+	graph export "$figure/Fig6_`x'.eps", as(eps) replace fontface("Times New Roman")
+}
 
-twoway 	(hist estimate if parm == "TxPan" & ids == "opd,infection" & idn > 0, lc(maroon%50) fc(maroon%50) frac start(-0.5) width(0.02)) ///
-		(hist estimate if parm == "TxPos" & ids == "opd,infection" & idn > 0, lc(navy%50) fc(navy%50) frac start(-0.5) width(0.02)) ///
-		(scatteri 0 `main1' 0.15 `main1', recast(line) lc(maroon) lp(dash)) ///
-		(scatteri 0 `main2' 0.15 `main2', recast(line) lc(navy) lp(dash)), ///
-		graphregion(fcolor(white) lcolor(white) ifcolor(white) ilcolor(white)) ///
-		plotregion(fcolor(white) lcolor(white) ifcolor(white) ilcolor(white)) ///
-		xscale(range(-0.62 0.22)) xlabel(-0.6(0.1)0.2) ylabel(0(0.03)0.15) ///
-		text(0.1 `textpos1' "Real Estimate" "(During Pandemic)", place(ne) color(maroon) size(small)) ///
-		text(0.08 `textpos2' "Real Estimate" "(After Pandemic)", place(ne) color(navy) size(small)) ///
-		xtitle(Placebo Estimate) ytitle(Fraction) ///
-		legend(order(1 "Placebo Estimates (During Pandemic)" 2 "Placebo Estimates (After Pandemic)") size(small))
-graph export "$figure/Figure_6_opd_infectious.png", as(png) replace
-
-
-sum estimate if parm == "TxPan" & ids == "ipd,non_infection" & idn == 0
-local main1 = r(mean)
-local textpos1 = `main1' + 0.002
-sum estimate if parm == "TxPos" & ids == "ipd,non_infection" & idn == 0
-local main2 = r(mean)
-local textpos2 = `main2' + 0.002
-
-twoway 	(hist estimate if parm == "TxPan" & ids == "ipd,non_infection" & idn > 0, lc(maroon%50) fc(maroon%50) frac start(-0.12) width(0.01)) ///
-		(hist estimate if parm == "TxPos" & ids == "ipd,non_infection" & idn > 0, lc(navy%50) fc(navy%50) frac start(-0.12) width(0.01)) ///
-		(scatteri 0 `main1' 0.17 `main1', recast(line) lc(maroon) lp(dash)) ///
-		(scatteri 0 `main2' 0.17 `main2', recast(line) lc(navy) lp(dash)), ///
-		graphregion(fcolor(white) lcolor(white) ifcolor(white) ilcolor(white)) ///
-		plotregion(fcolor(white) lcolor(white) ifcolor(white) ilcolor(white)) ///
-		xscale(range(-0.12 0.32)) xlabel(-0.10(0.05)0.3) ylabel(0(0.04)0.16) ///
-		text(0.155 `textpos1' "Real Estimate" "(During Pandemic)", place(ne) color(maroon) size(small)) ///
-		text(0.145 `textpos2' "Real Estimate" "(After Pandemic)", place(ne) color(navy) size(small)) ///
-		xtitle(Placebo Estimate) ytitle(Fraction) ///
-		legend(order(1 "Placebo Estimates (During Pandemic)" 2 "Placebo Estimates (After Pandemic)") size(small))
-graph export "$figure/Figure_6_ipd_non_infection.png", as(png) replace
-
-
-sum estimate if parm == "TxPan" & ids == "opd,non_infection" & idn == 0
-local main1 = r(mean)
-local textpos1 = `main1' + 0.002
-sum estimate if parm == "TxPos" & ids == "opd,non_infection" & idn == 0
-local main2 = r(mean)
-local textpos2 = `main2' + 0.002
-
-twoway 	(hist estimate if parm == "TxPan" & ids == "opd,non_infection" & idn > 0, lc(maroon%50) fc(maroon%50) frac start(-0.1) width(0.005)) ///
-		(hist estimate if parm == "TxPos" & ids == "opd,non_infection" & idn > 0, lc(navy%50) fc(navy%50) frac start(-0.1) width(0.005)) ///
-		(scatteri 0 `main1' 0.12 `main1', recast(line) lc(maroon) lp(dash)) ///
-		(scatteri 0 `main2' 0.12 `main2', recast(line) lc(navy) lp(dash)), ///
-		graphregion(fcolor(white) lcolor(white) ifcolor(white) ilcolor(white)) ///
-		plotregion(fcolor(white) lcolor(white) ifcolor(white) ilcolor(white)) ///
-		xscale(range(-0.19 0.1)) xlabel(-0.18(0.03)0.09) ylabel(0(0.02)0.12) ///
-		text(0.1 `textpos1' "Real Estimate" "(During Pandemic)", place(ne) color(maroon) size(small)) ///
-		text(0.1 `textpos2' "Real Estimate" "(After Pandemic)", place(ne) color(navy) size(small)) ///
-		xtitle(Placebo Estimate) ytitle(Fraction) ///
-		legend(order(1 "Placebo Estimates (During Pandemic)" 2 "Placebo Estimates (After Pandemic)") size(small))
-graph export "$figure/Figure_6_opd_non_infection.png", as(png) replace
-
-sum estimate if parm == "TxPan" & ids == "ipd,total" & idn == 0
-local main1 = r(mean)
-local textpos1 = `main1' + 0.002
-sum estimate if parm == "TxPos" & ids == "ipd,total" & idn == 0
-local main2 = r(mean)
-local textpos2 = `main2' + 0.002
-
-twoway 	(hist estimate if parm == "TxPan" & ids == "ipd,total" & idn > 0, lc(maroon%50) fc(maroon%50) frac start(-0.12) width(0.01)) ///
-		(hist estimate if parm == "TxPos" & ids == "ipd,total" & idn > 0, lc(navy%50) fc(navy%50) frac start(-0.12) width(0.01)) ///
-		(scatteri 0 `main1' 0.17 `main1', recast(line) lc(maroon) lp(dash)) ///
-		(scatteri 0 `main2' 0.17 `main2', recast(line) lc(navy) lp(dash)), ///
-		graphregion(fcolor(white) lcolor(white) ifcolor(white) ilcolor(white)) ///
-		plotregion(fcolor(white) lcolor(white) ifcolor(white) ilcolor(white)) ///
-		xscale(range(-0.12 0.32)) xlabel(-0.10(0.05)0.3) ylabel(0(0.04)0.16) ///
-		text(0.160 `textpos1' "Real Estimate" "(During Pandemic)", place(ne) color(maroon) size(small)) ///
-		text(0.140 `textpos2' "Real Estimate" "(After Pandemic)", place(ne) color(navy) size(small)) ///
-		xtitle(Placebo Estimate) ytitle(Fraction) ///
-		legend(order(1 "Placebo Estimates (During Pandemic)" 2 "Placebo Estimates (After Pandemic)") size(small))
-graph export "$figure/Figure_6_ipd_total.png", as(png) replace
-
-
-sum estimate if parm == "TxPan" & ids == "opd,total" & idn == 0
-local main1 = r(mean)
-local textpos1 = `main1' + 0.002
-sum estimate if parm == "TxPos" & ids == "opd,total" & idn == 0
-local main2 = r(mean)
-local textpos2 = `main2' + 0.002
-
-twoway 	(hist estimate if parm == "TxPan" & ids == "opd,total" & idn > 0, lc(maroon%50) fc(maroon%50) frac start(-0.1) width(0.005)) ///
-		(hist estimate if parm == "TxPos" & ids == "opd,total" & idn > 0, lc(navy%50) fc(navy%50) frac start(-0.1) width(0.005)) ///
-		(scatteri 0 `main1' 0.1 `main1', recast(line) lc(maroon) lp(dash)) ///
-		(scatteri 0 `main2' 0.1 `main2', recast(line) lc(navy) lp(dash)), ///
-		graphregion(fcolor(white) lcolor(white) ifcolor(white) ilcolor(white)) ///
-		plotregion(fcolor(white) lcolor(white) ifcolor(white) ilcolor(white)) ///
-		xscale(range(-0.22 0.1)) xlabel(-0.21(0.03)0.09) ylabel(0(0.02)0.1) ///
-		text(0.08 `textpos1' "Real Estimate" "(During Pandemic)", place(ne) color(maroon) size(small)) ///
-		text(0.08 `textpos2' "Real Estimate" "(After Pandemic)", place(ne) color(navy) size(small)) ///
-		xtitle(Placebo Estimate) ytitle(Fraction) ///
-		legend(order(1 "Placebo Estimates (During Pandemic)" 2 "Placebo Estimates (After Pandemic)") size(small))
-graph export "$figure/Figure_6_opd_total.png", as(png) replace

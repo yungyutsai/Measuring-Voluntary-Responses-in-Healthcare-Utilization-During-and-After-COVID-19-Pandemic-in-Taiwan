@@ -1,47 +1,41 @@
-local var = "total infection non_infection"
-local did = "TxPandemic TxPostPandemic Pandemic PostPandemic"
+local var = "total flu non_flu"
+local did = "TxPandemic TxCOVIDFree Pandemic COVIDFree"
 local control1 = "i.eve i.ny i.cny i.peace i.qingming i.labor i.dragon i.moon i.double10"
-local control2 = "i.eve i.ny i.cny i.peace i.qingming i.labor i.dragon i.moon i.double10 Temp Precp"
-local control3 = "i.eve i.ny i.cny i.peace i.qingming i.labor i.dragon i.moon i.double10 Temp Precp"
+local control2 = "i.eve i.ny i.cny i.peace i.qingming i.labor i.dragon i.moon i.double10 Temp Precp ageb14 age1564 agea65 gender_ratio postsecondary secondary lower"
+local control3 = "i.eve i.ny i.cny i.peace i.qingming i.labor i.dragon i.moon i.double10 Temp Precp ageb14 age1564 agea65 gender_ratio postsecondary secondary lower"
 local control4 = "i.eve i.ny i.cny i.peace i.qingming i.labor i.dragon i.moon i.double10 Temp Precp"
 local absorb1 = "year week"
 local absorb2 = "year week"
 local absorb3 = "year week city_no"
-local absorb4 = "city_no#year city_no#week"
+local absorb4 = "city_no#c.yweek city_no#year city_no#week"    
 
 clear
 set more off
+capture log close
 
 foreach x in `var' {
 foreach y in opd ipd{
+	
 use "$wdata/NHI_`y'_for_analysis.dta", clear
+gen postsecondary = graduate + college + juniorcollege
+gen secondary = highschool + juniorhigh
+gen lower = primary + illiterate
+replace `x' = `x' / population * 100000
 
 forv i = 1(1)4{
 
-sum `x' if treatment == 1 & inrange(week,1,3) //用2020年1至3週當Baseline Mean 
+sum `x' if treatment == 1 & inrange(week,1,3) //Baseline Mean as the 1st to 3rd week
 local mean = `r(mean)'
 
-ppmlhdfe `x' `did' `control`i'' [pweight = population], absorb(`absorb`i'') vce(cl city_cd) exp(population)
-matrix V = e(V)
-local se_city1 = round(sqrt(V[1,1]),.01)
-local se_city2 = round(sqrt(V[2,2]),.01)
-
-ppmlhdfe `x' `did' `control`i'' [pweight = population], absorb(`absorb`i'') vce(cl yearweek) exp(population)
-matrix V = e(V)
-local se_yw1 = round(sqrt(V[1,1]),.01)
-local se_yw2 = round(sqrt(V[2,2]),.01)
-
-ppmlhdfe `x' `did' `control`i'' [pweight = population], absorb(`absorb`i'') vce(cl city_cd yearweek) exp(population)
+ppmlhdfe `x' `did' `control`i'' [pweight = population], absorb(`absorb`i'') vce(cl city_cd yearweek)
 
 if "`y'" == "opd" & `i' == 1{
 outreg2 using "$table/temp/Table_B2_`x'", ///
-replace title("Outcomes: `x'") ctitle(`y') nocon keep(TxPandemic TxPostPandemic) bd(2) sd(2) ///
-addtext(Cluster at County Level 1, "[`se_city1']", Cluster at YearWeek Level 1, "{`se_yw1'}", Cluster at County Level 2, "[`se_city2']", Cluster at YearWeek Level 2, "{`se_yw2'}")
+replace title("Outcomes: `x'") ctitle(`y') nocon keep(TxPandemic TxCOVIDFree) bd(2) sd(2) alpha(0.001, 0.01, 0.05)
 }
 else{
 outreg2 using "$table/temp/Table_B2_`x'", ///
-append title("Outcomes: `x'") ctitle(`y') nocon keep(TxPandemic TxPostPandemic) bd(2) sd(2) ///
-addtext(Cluster at County Level 1, "[`se_city1']", Cluster at YearWeek Level 1, "{`se_yw1'}", Cluster at County Level 2, "[`se_city2']", Cluster at YearWeek Level 2, "{`se_yw2'}")
+append title("Outcomes: `x'") ctitle(`y') nocon keep(TxPandemic TxCOVIDFree) bd(2) sd(2) alpha(0.001, 0.01, 0.05)
 }
 }
 }
@@ -51,42 +45,29 @@ save "$table/temp/Table_B2_`x'.dta", replace
 
 }
 
-use "$table/temp/Table_B2_total.dta", clear
-ap using "$table/temp/Table_B2_infection.dta"
-ap using "$table/temp/Table_B2_non_infection.dta"
+use "$table/temp/Table_B2_total.dta",clear
+ap using "$table/temp/Table_B2_flu.dta"
+ap using "$table/temp/Table_B2_non_flu.dta"
 
-forv i = 2(1)9{
-	replace v`i' = subinstr(v`i',"[.","[0.",.)
-	replace v`i' = subinstr(v`i',"{.","{0.",.)
-}
+keep if inrange(_n,4,8) | inrange(_n,16,20) | inrange(_n,28,36)
 
-compress
-
-gen row = _n
-
-replace row = 6.1 if row == 11
-replace row = 6.2 if row == 12
-replace row = 8.1 if row == 13
-replace row = 8.2 if row == 14
-replace row = 22.1 if row == 27
-replace row = 22.2 if row == 28
-replace row = 24.1 if row == 29
-replace row = 24.2 if row == 30
-replace row = 38.1 if row == 42
-replace row = 38.2 if row == 43
-replace row = 40.1 if row == 44
-replace row = 40.2 if row == 45
-
-sort row
-drop row 
-compress
-
-keep if inrange(_n,4,12) | inrange(_n,20,28) | inrange(_n,36,47) 
-
-replace v1 = "Panel A: Total Visits/Admissions" in 1 
-replace v1 = "Panel B: Infectious Diseases" in 10
-replace v1 = "Panel C: Non-infectious diseases" in 19
-
+replace v1 = "\multicolumn{9}{@{}l@{}}{\textbf{Panel A:} All diseases}" in 1 
+replace v1 = "\multicolumn{9}{@{}l@{}}{\textbf{Panel B:} ILI diseases}" in 6
+replace v1 = "\multicolumn{9}{@{}l@{}}{\textbf{Panel C:} Non-ILI diseases}" in 11
+replace v1 = "\$Y_{2020} \times Pandemic$" if v1 == "TxPandemic"
+replace v1 = "\$Y_{2020} \times CovidFree$" if v1 == "TxCOVIDFree"
 
 export excel using "$table/Table_B2.xlsx", replace
 
+drop in 16/19
+
+texsaveyt 	_all using "$tex/tables/TabB2_temp.tex", replace ///
+			title ("Effects of COVID-19 outbreak on health utilization (by pandemic periods)") nonames ///
+			headerlines("& (1) & (2) & (3) & (4) & (5) & (6) & (7) & (8) \\ \cmidrule(r){2-5} \cmidrule(l){6-9} & \multicolumn{4}{c}{Outpatient Care} & \multicolumn{4}{c}{Inpatient Care}") ///
+			bottomlines("Observation & \multicolumn{8}{c}{8,008} \\ Basic control & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark & \checkmark& \checkmark & \checkmark  \\ Demographic variables & & \checkmark & \checkmark & & & \checkmark & \checkmark &  \\ Weather variables & & \checkmark & \checkmark & \checkmark & & \checkmark & \checkmark & \checkmark \\ County fixed effect & & & \checkmark & \checkmark & & & \checkmark & \checkmark \\ County-by-year fixed effect & & & & \checkmark & & & & \checkmark \\ County-by-week fixed effect & & & & \checkmark & & & & \checkmark \\ County specific time trend & & & & \checkmark & & & & \checkmark \\") ///
+			hlines(0 5 10 15 15) nofix size(footnotesize) align(@{}lcccccccc@{}) ///
+			label(did_table2) frag rh(1.25) cs(1) ///
+			footnote("This table shows the estimated $\gamma_{1}$ (i.e. the coefficient on $Y_{2020} \times Pandemic_{d}$) and $\gamma_{2}$ (i.e. the coefficient on $Y_{2020} \times CovidFree_{d}$) in the equation (\ref{eq:eq2}), which is a Poisson regression. Sample period is 2014--2020. {\textit Basic Control} includes the year fixed effect, the week fixed effect and various holiday dummies such as, New Year Eve, New Year, Lunar New Year, Peace Memorial Day, Qing-Ming Festival, Labor's Day, and Dragon Boat Festival, Moon Festival, and National Day. {\textit Demographic Variables} includes annually county-level age structure, sex ratio, educational attainment. {\textit Weather Variables} includes weekly county-level temperatures and precipitation. All regressions are weighted by the monthly population size of a county. Robust standard errors clustered at the year-week and county levels are reported in parentheses. \\ $^{*} p < 0.05 ~~^{**} p < 0.01 ~~^{***} p < 0.001$")
+
+filefilter "$tex/tables/TabB2_temp.tex" "$tex/tables/TabB2.tex", from("&&&&&&&&") to("") replace
+cap rm "$tex/tables/TabB2_temp.tex"

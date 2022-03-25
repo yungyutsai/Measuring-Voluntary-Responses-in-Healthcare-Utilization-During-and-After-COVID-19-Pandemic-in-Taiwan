@@ -9,6 +9,8 @@ library(haven)  # for function "write_dta"
 
 Sys.setlocale("LC_ALL","English") # Need to change language to English (though the tables going to be loaded are in Chinese...)
 
+rawdata <- "/Users/yungyu/YourPath/Dropbox/RA_research/COVID-19_impact/TW_health/Github/data/rdata/weather" # Set raw data saved folders
+
 ### Get List of Station ###
 URL <- 'https://e-service.cwb.gov.tw/wdps/obs/state.htm?fbclid=IwAR0hqTflupJsnhtox7lrhcT3XG95wet7DOlLXwOPEPYhCMZqD7cbd3rtIHw'
 html <- read_html(URL)
@@ -56,13 +58,13 @@ for(y in c(2014:2020)){
       tryCatch({ # Some URLs may failed to be load, skip these
         Sys.setlocale("LC_ALL","English") # Need to change language to English (though the tables going to be loaded are in Chinese...)
         webpage <- getURL(URL) # Because this website is created by javascript, we need to getURL first
-        html <- minimal_html(webpage) # similiar as read_html, but can work with the result of getURL
+        html <- minimal_html(webpage) # similar as read_html, but can work with the result of getURL
         tables <- html_table(html, header = F) # Get all tables in the html
         table <- tables[[2]] # Get the second table in the tables list (the first is a menu)
-        colname <- as.character(table[3,]) # Extract column name from the third row (replace as 2 if want chinese name instead)
+        colname <- as.character(table[3,]) # Extract column name from the third row (replace as 2 if want Chinese name instead)
         colname <- gsub(" ","_",colname) # Stata does not allow variable names with space, replace them
         table <- as.vector(table[-1:-3,]) # Remove first three rows (not required)
-        colnames(table) <- colname # lable variables names
+        colnames(table) <- colname # label variables names
         table$date <- paste0(j,"-",table[,1]) # generate variable of date
         table$station_no <- station.list.needed$station_no[i] # generate variable of station number
         table$station_name <- station.list.needed$station_name[i] # generate variable of station name
@@ -80,7 +82,7 @@ for(y in c(2014:2020)){
   # Merge daily data with station information
   data <- merge(data,station.list,by = c("station_no","station_name"))
   # Assigned filed saved path and name
-  save.name <- paste0("/Users/Tina/YourPath/Dropbox/RA_research/COVID-19_impact/TW_temperature/rawdata/daily/CWB_data_",y,".dta")
+  save.name <- paste0(rawdata,"CWB_data_",y,".dta")
   # Save data as Stata format
   write_dta(data,save.name)
   rm(data)

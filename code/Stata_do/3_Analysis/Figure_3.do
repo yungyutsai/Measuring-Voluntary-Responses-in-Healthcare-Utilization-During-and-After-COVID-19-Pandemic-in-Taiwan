@@ -1,48 +1,104 @@
+local var = "flu non_flu"
+local event = "p*treat"
+local control = "i.eve i.ny i.cny i.peace i.qingming i.labor i.dragon i.moon i.double10 Temp Precp"
+local absorb = "city_no#c.yweek city_no#year city_no#week"
+local opd_flu = "(A) Outpatient care: ILI diseases"
+local opd_non_flu = "(B) Outpatient care: Non-ILI diseases"
+local ipd_flu = "(C) Inpatient care: ILI diseases" 
+local ipd_non_flu = "(D) Inpatient care: Non-ILI diseases"
+
 clear
 set more off
 
-local var = "total infection non_infection"
-local control = "i.eve i.ny i.cny i.peace i.qingming i.labor i.dragon i.moon i.double10 Temp Precp"
-local absorb = "city_no#year city_no#week"
-
-foreach x in `var' {
 foreach y in opd ipd{
+cap rm "$figure/temp/Figure_3_`y'.xls"
+cap rm "$figure/temp/Figure_3_`y'.txt"
+
 use "$wdata/NHI_`y'_for_analysis.dta", clear
 
-rename TxPandemic `y' //for graphing purpose
-ppmlhdfe `x' `y' TxPostPandemic `control' [pweight = population], absorb(`absorb') vce(cl city_cd yearweek) exp(population)
-estimates store Model2_`x'_`y'
+foreach x in `var' {
+replace `x' = `x' / population * 100000
 
-rename `y' TxPandemic
-rename TxPostPandemic `y' //for graphing purpose
-ppmlhdfe `x' `y' TxPandemic `control' [pweight = population], absorb(`absorb') vce(cl city_cd yearweek) exp(population)
-estimates store Model3_`x'_`y'
-
+ppmlhdfe `x' `event' `control' [pweight = population], absorb(`absorb') vce(cl city_cd yearweek)
+outreg2 using "$figure/temp/Figure_3_`y'.xls", ///
+append title("Event Study") ctitle(`x') nocon keep(p*Xtreat) eform
 }
 }
 
-foreach x in opd ipd{
-cap drop __*
-coefplot 	(Model2_total_`x', ciopts(recast(rcap) lcol(maroon)) mc(maroon) offset(-0.4)) ///
-			(Model3_total_`x', ciopts(recast(rcap) lcol(forest_green)) mc(forest_green) ms(D) msize(medsmall) offset(-0.3)) ///
-			(Model2_infection_`x', ciopts(recast(rcap) lcol(maroon)) mc(maroon) offset(-0.05)) ///
-			(Model3_infection_`x', ciopts(recast(rcap) lcol(forest_green)) mc(forest_green) ms(D) msize(medsmall) offset(0.05)) ///
-			(Model2_non_infection_`x', ciopts(recast(rcap) lcol(maroon)) mc(maroon) offset(0.3)) ///
-			(Model3_non_infection_`x', ciopts(recast(rcap) lcol(forest_green)) mc(forest_green) ms(D) msize(medsmall) offset(0.4)), ///
-			keep(`x') verti scheme(s1color) ///
-			yline(0, lc(black) lp(dash)) ytitle(Estimated Coefficients) name(coefplot1, replace) generate
-replace __mlbl = string(__b, "%6.2f") if !missing(__b)
-gen __mlblci = "[" + string(__ll1, "%6.2f") + "; " + string(__ul1, "%6.2f") + "]" if !missing(__b)
 
-replace __mlpos = __ll1 -0.01
-gen __mlposci = __mlpos -0.04
-gen __atci = __at
+foreach y in opd ipd{
 
-addplot: (scatter __mlpos __at, ms(i) mlabel(__mlbl) mlabsize(small) mlabc(black) mlabp(6)) ///
-		(scatter __mlposci __atci, ms(i) mlabel(__mlblci) mlabsize(small) mlabc(black) mlabp(6)), ///
-		xlabel(none) xscale(range(0.5 1.5)) xtitle(" ") ///
-		ylabel(-0.7(0.1)0.2, format(%9.1f) angle(0)) yscale(range(-0.75 0.25)) ///
-		legend(col(2) order(2 "During Pandemic Period" 4 "After Pandemic Period") size(small)) ///
-		text(0.15 0.65 "Total", place(n)) text(0.15 1 "Infectious Diseases", place(n)) text(0.15 1.35 "Other Diseases", place(n))
-graph export "$figure/Figure_3_`x'.png", as(png) replace
+import delimited "$figure/temp/Figure_3_`y'.txt", varnames(3) clear 
+
+**Delete Table Head and Foot
+drop in 1
+
+local a = _N //106
+local b = _N - 3 //103
+
+drop in `b'/`a' //Drop last 4 lines (# of Observations and the Note lines)
+
+**Eliminate Parentheses, Comma, and Symbol
+foreach x of varlist `var'{
+replace `x' = subinstr(`x',"*","",.)
+replace `x' = subinstr(`x',",","",.)
+replace `x' = subinstr(`x',"(","",.)
+replace `x' = subinstr(`x',")","",.)
+destring `x', replace
+recode `x' . = 0
+rename `x' _`x'
 }
+
+**Organize
+gen week = -3
+replace week = week[_n-2] + 1 if _n > 2
+replace week = week + 1 if week >= -2
+
+local a = _N + 2
+set obs `a' //Add Reference Groups
+replace week = -2 if week == .
+foreach x of varlist _*{
+recode `x' . = 1
+local N = _N
+replace `x' = 0 in `N'
+}
+
+local a = _N - 1
+gen type = "coef"
+replace type = "se" if var == ""
+replace type = "coef" in `a'
+drop var
+
+reshape wide _*, i(week) j(type) string
+
+cd "$figure/temp"
+foreach x in `var'{
+gen upper_`x' = _`x'coef + 1.96 * _`x'se
+gen lower_`x' = _`x'coef - 1.96 * _`x'se
+
+twoway	(scatteri 0.32 20 0.32 0 1.68 0 1.68 20, recast(area) lc(gs13) color(gs12)) ///
+		(scatteri 0.32 48 0.32 20 1.68 20 1.68 48, recast(area) lc(gs15) color(gs14)) ///
+		(rline upper_`x' lower_`x' week, lc(navy) lp(dash) lw(thin)) ///
+		(connect _`x'coef week, mcolor(maroon) lc(maroon) msize(vsmall) lw(thin)) ///
+		(scatteri 1 -3 1 48, recast(line) lc(black) lp(dash) lw(thin)), ///
+		graphregion(fcolor(white) lcolor(white) ifcolor(white) ilcolor(white)) ///
+		plotregion(fcolor(white) lcolor(white) ifcolor(white) ilcolor(white)) ///
+		yscale(range(0.32 1.68)) ylabel(0.4(0.2)1.6, nogrid angle(0) format(%9.1f)) ///
+		xlabel(0(5)45) leg(order(4 "IRR" 3 "95% CI") size(small) symxsize(6pt)) ///
+		ytitle("IRR") ///
+		xtitle("Weeks form the 4{superscript:th} week of a year") ///
+		text(1.7 10 "Pandemic Period", size(small) place(n)) ///
+		text(1.7 34 "COVID-Free Period", size(small) place(n)) ///
+		title(``y'_`x'', color(black) size(medlarge) margin(medium)) ///
+		name("Fig3_`y'_`x'", replace) fxsize(100) fysize(80)
+}
+}
+
+
+grc1leg Fig3_opd_flu Fig3_opd_non_flu Fig3_ipd_flu Fig3_ipd_non_flu, scheme(s1color) cols(2) legendfrom(Fig3_opd_flu) imargin(0 0 0 0) saving(Fig3, replace)
+graph display, ysize(65) xsize(79.25)
+
+graph export "$figure/Fig3.eps", as(eps) replace fontface("Times New Roman")
+cap graph export "$tex/Fig3.eps", as(eps) replace fontface("Times New Roman")
+
+
