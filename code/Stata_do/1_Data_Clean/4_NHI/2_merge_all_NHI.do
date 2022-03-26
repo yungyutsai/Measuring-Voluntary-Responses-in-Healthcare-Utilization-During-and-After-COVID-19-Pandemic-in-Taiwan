@@ -26,17 +26,17 @@ rename 其他肺炎健保就診人次 other_pneumonia
 rename 猩紅熱健保就診人次 scarlet_fever
 rename 水痘健保就診人次 varicella
 
-lab var total "健保就診總人次"
-lab var acute_uri "急性上呼吸道感染健保就診人次"
-lab var diarrhea "腹瀉健保就診人次"
-lab var enterovirus "腸病毒健保就診人次"
-lab var hfmd "手足口病健保就診人次"
-lab var herpangina "疱疹性咽峽炎健保就診人次"
-lab var influenza "流感及其所致肺炎健保就診人次"
-lab var influenza_like "類流感健保就診人次"
-lab var other_pneumonia "其他肺炎健保就診人次"
-lab var scarlet_fever "猩紅熱健保就診人次"
-lab var varicella "水痘健保就診人次"
+lab var total "Total" //
+lab var acute_uri "Acute Upper Respiratory Infection"
+lab var diarrhea "Diarrhea"
+lab var enterovirus "Enterovirus"
+lab var hfmd "Hand, Foot, and Mouth Disease (HFMD)"
+lab var herpangina "Herpangina"
+lab var influenza "Influenza and Influenza Caused Pneumonia"
+lab var influenza_like "Influenza-like illness"
+lab var other_pneumonia "Other Pneumonia"
+lab var scarlet_fever "Scarlet Fever"
+lab var varicella "Varicella"
 
 gen yw = yw(year,week)
 format yw %twCCYYWW
@@ -49,23 +49,25 @@ foreach x of varlist total-varicella{
 recode `x' . = 0
 }
 
-gen flu = influenza_like
+gen flu = influenza_like + acute_uri
 gen non_flu = total - flu
 gen other_infection = diarrhea + enterovirus + scarlet_fever + varicella
-gen non_infection = total - flu - acute_uri - other_infection
+gen non_infection = total - flu - other_infection
 
-lab var flu "流感、類流感及肺炎健保就診人次"
-lab var non_flu "非流感肺炎類健保就診人次"
-lab var other_infection "其他傳染性、感染性疾病健保就診人次"
-lab var non_infection "非傳染性、感染性疾病健保就診人次"
+lab var flu "ILI and Acute URI"
+lab var non_flu "Non ILI and Acute URI"
+lab var other_infection "Other Infectious Diseases"
+lab var non_infection "Non Infectious Diseases"
 
 order flu non_flu non_infection acute_uri other_infection, a(total)
 
 save "$wdata/NHI/NHI_all.dta", replace
 
-keep if type == "門診"
+keep if type == "門診" //Outpatient
+replace type = "Outpatient"
 save "$wdata/NHI/NHI_opd.dta", replace
 
 use "$wdata/NHI/NHI_all.dta", clear
-keep if type == "住院"
+keep if type == "住院" //Inpatient
+replace type = "Inpatient"
 save "$wdata/NHI/NHI_ipd.dta", replace

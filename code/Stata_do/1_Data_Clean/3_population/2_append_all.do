@@ -13,9 +13,21 @@ compress
 
 gen key_ym = (y+1911) * 100 + m //Change to A.D.
 
-foreach x in "" "_age04" "_age514" "_age1524" "_age2564" "_age65up" "_age15up"{
-	rename population`x' county_pop`x'
-	lab var county_pop`x' "County Population (Monthly)"
+rename population county_pop
+lab var county_pop "County Population (Monthly)"
+
+merge 1:1 city year month using "$wdata/population/gender_ratio.dta"
+drop if _m == 1
+drop _m
+
+merge m:1 city year using "$wdata/population/education_level.dta"
+drop _m
+
+
+foreach x of varlist pop* gender{
+	egen `x'mean = mean(`x'), by(year city)
+	replace `x' = `x'mean
+	drop `x'mean
 }
 
 save "$wdata/population/population.dta", replace
