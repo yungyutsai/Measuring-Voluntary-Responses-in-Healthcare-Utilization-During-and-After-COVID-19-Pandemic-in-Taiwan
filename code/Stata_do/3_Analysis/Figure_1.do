@@ -29,7 +29,7 @@ twoway	(bar all_cases week, fcolor(gs12) fintensity(50) lcolor(gs4) lwidth(vthin
 		xlabel(5(5)50) xscale(range(1 52)) yscale(range(0 130)) ylabel(0(20)120, angle(0)) ///
 		leg(col(1) order(2 "Number of New Local Confirmed Cases" 1 "Number of New Non-Local Confirmed Cases") ///
 		ring(0) position(2) size(small) symxsize(3pt)) ///
-		xtitle("Week") ytitle("Number of New Confirmed Cases")
+		xtitle("Week of Year 2020") ytitle("Number of New Confirmed Cases")
 graph export "$figure/Fig1.eps", as(eps) replace fontface("Times New Roman")
 cap graph export "$tex/Fig1.eps", as(eps) replace fontface("Times New Roman")
 
